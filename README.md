@@ -26,12 +26,36 @@ Our five-layer stack compiles standard bank documents (SOPs, BPMNs) directly int
 
 *(Read our full [Architecture & E2E Process Whitebook](ARCHITECTURE.md) to see exactly how we route intents and execute state mutations across multiple banking workflows).*
 
-```mermaid
-graph LR
-    A[L0: SOURCES<br/>OpenAPI, BPMN, Excel DMN] -->|Ingestion| B[L1: ENTITY SCHEMA<br/>external.loan_application<br/>Auto-tokenised PII]
-    B -->|Binding| C[L2: STATE CORE<br/>Deterministic Engine Lifecycle]
-    C -->|Routing| D[L3: DECISIONS + AGENTS<br/>Structured Decision Registry]
-    D -->|Execution| E[L4: TOOLS (MCP)<br/>Secure Sandboxed Gateways]
+```text
+┌─────────────────────────────────────────┐
+│              L0: SOURCES                │
+│       OpenAPI, BPMN, Excel DMN          │
+└────────────┬────────────────────────────┘
+             │ Ingestion
+             ▼
+┌─────────────────────────────────────────┐
+│           L1: ENTITY SCHEMA             │
+│       external.loan_application         │
+│         (Auto-tokenised PII)            │
+└────────────┬────────────────────────────┘
+             │ Binding
+             ▼
+┌─────────────────────────────────────────┐
+│             L2: STATE CORE              │
+│      Deterministic Engine Lifecycle     │
+└────────────┬────────────────────────────┘
+             │ Routing
+             ▼
+┌─────────────────────────────────────────┐
+│         L3: DECISIONS + AGENTS          │
+│      Structured Decision Registry       │
+└────────────┬────────────────────────────┘
+             │ Execution
+             ▼
+┌─────────────────────────────────────────┐
+│             L4: TOOLS (MCP)             │
+│        Secure Sandboxed Gateways        │
+└─────────────────────────────────────────┘
 ```
 
 ### ⚡ Deep Technical Maturity (Production Architecture)
