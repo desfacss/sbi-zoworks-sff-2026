@@ -1,0 +1,114 @@
+[
+  {
+    "id": "mudra_eligibility",
+    "description": "MUDRA eligibility: 7-rule PRIORITY table with CIBIL banding and recommended_loan_cap.",
+    "hit_policy": "PRIORITY",
+    "inputs": [
+      {
+        "key": "annual_turnover_inr",
+        "type": "number",
+        "source": "annual_turnover_inr"
+      },
+      {
+        "key": "cibil_score",
+        "type": "number",
+        "source": "cibil_score"
+      }
+    ],
+    "output": {
+      "key": "is_eligible",
+      "type": "boolean"
+    },
+    "rules": [
+      {
+        "priority": 1,
+        "input_entries": {
+          "annual_turnover_inr": "< 100000"
+        },
+        "output_entries": {
+          "is_eligible": false,
+          "mudra_tier": null,
+          "rejection_reason": "Annual turnover below minimum Rs 1 lakh.",
+          "recommended_loan_cap": null
+        }
+      },
+      {
+        "priority": 2,
+        "input_entries": {
+          "cibil_score": "< 700"
+        },
+        "output_entries": {
+          "is_eligible": false,
+          "mudra_tier": null,
+          "rejection_reason": "CIBIL score below minimum 700. Reapply after clearing outstanding dues.",
+          "recommended_loan_cap": null
+        }
+      },
+      {
+        "priority": 3,
+        "input_entries": {
+          "annual_turnover_inr": "> 5000000",
+          "cibil_score": ">= 750"
+        },
+        "output_entries": {
+          "is_eligible": true,
+          "mudra_tier": "TARUN",
+          "rejection_reason": null,
+          "recommended_loan_cap": 1000000
+        }
+      },
+      {
+        "priority": 4,
+        "input_entries": {
+          "annual_turnover_inr": "> 5000000",
+          "cibil_score": ">= 700"
+        },
+        "output_entries": {
+          "is_eligible": true,
+          "mudra_tier": "TARUN",
+          "rejection_reason": null,
+          "recommended_loan_cap": 750000
+        }
+      },
+      {
+        "priority": 5,
+        "input_entries": {
+          "annual_turnover_inr": "> 500000",
+          "cibil_score": ">= 750"
+        },
+        "output_entries": {
+          "is_eligible": true,
+          "mudra_tier": "KISHORE",
+          "rejection_reason": null,
+          "recommended_loan_cap": 500000
+        }
+      },
+      {
+        "priority": 6,
+        "input_entries": {
+          "annual_turnover_inr": "> 500000",
+          "cibil_score": ">= 700"
+        },
+        "output_entries": {
+          "is_eligible": true,
+          "mudra_tier": "KISHORE",
+          "rejection_reason": null,
+          "recommended_loan_cap": 300000
+        }
+      },
+      {
+        "priority": 7,
+        "input_entries": {
+          "annual_turnover_inr": ">= 100000",
+          "cibil_score": ">= 700"
+        },
+        "output_entries": {
+          "is_eligible": true,
+          "mudra_tier": "SHISHU",
+          "rejection_reason": null,
+          "recommended_loan_cap": 50000
+        }
+      }
+    ]
+  }
+]

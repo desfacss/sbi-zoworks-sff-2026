@@ -1,0 +1,90 @@
+[
+  {
+    "id": "kyc_risk_assessment",
+    "description": "KYC risk scoring: 5-rule PRIORITY table based on PEP flag, document age, and country risk classification.",
+    "hit_policy": "PRIORITY",
+    "inputs": [
+      {
+        "key": "is_pep",
+        "type": "boolean",
+        "source": "is_pep"
+      },
+      {
+        "key": "doc_age_years",
+        "type": "number",
+        "source": "doc_age_years"
+      },
+      {
+        "key": "country_risk_level",
+        "type": "string",
+        "source": "country_risk_level"
+      }
+    ],
+    "output": {
+      "key": "risk_tier",
+      "type": "string"
+    },
+    "rules": [
+      {
+        "priority": 1,
+        "label": "PEP \u2014 always HIGH risk",
+        "input_entries": {
+          "is_pep": true
+        },
+        "output_entries": {
+          "risk_tier": "HIGH",
+          "kyc_valid_until": null
+        }
+      },
+      {
+        "priority": 2,
+        "label": "Stale docs + high risk country",
+        "input_entries": {
+          "doc_age_years": "> 5",
+          "country_risk_level": "HIGH"
+        },
+        "output_entries": {
+          "risk_tier": "HIGH",
+          "kyc_valid_until": null
+        }
+      },
+      {
+        "priority": 3,
+        "label": "Outdated documents",
+        "input_entries": {
+          "is_pep": false,
+          "doc_age_years": "> 3"
+        },
+        "output_entries": {
+          "risk_tier": "MEDIUM",
+          "kyc_valid_until": null
+        }
+      },
+      {
+        "priority": 4,
+        "label": "Recent docs + high risk country",
+        "input_entries": {
+          "is_pep": false,
+          "doc_age_years": "<= 3",
+          "country_risk_level": "HIGH"
+        },
+        "output_entries": {
+          "risk_tier": "MEDIUM",
+          "kyc_valid_until": null
+        }
+      },
+      {
+        "priority": 5,
+        "label": "Standard \u2014 LOW risk, auto-clear",
+        "input_entries": {
+          "is_pep": false,
+          "doc_age_years": "<= 3"
+        },
+        "output_entries": {
+          "risk_tier": "LOW",
+          "kyc_valid_until": null
+        }
+      }
+    ]
+  }
+]

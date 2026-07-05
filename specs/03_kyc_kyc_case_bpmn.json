@@ -1,0 +1,421 @@
+{
+  "lifecycle": {
+    "start_stage": "KYC_INITIATED",
+    "stages": [
+      {
+        "id": "KYC_INITIATED",
+        "name": "KYC Initiated",
+        "category": "NEW",
+        "sequence": 1,
+        "sla_hours": 48,
+        "description": "Customer initiates KYC. Collect account number and PEP declaration.",
+        "required_fields": [
+          "account_number",
+          "is_pep"
+        ],
+        "on_entry_event_name": "banking.kyc_case.stage.KYC_INITIATED.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "compliance_lead"
+        }
+      },
+      {
+        "id": "DOCUMENT_COLLECTION",
+        "name": "Document Collection",
+        "category": "IN_PROGRESS",
+        "sequence": 2,
+        "sla_hours": 48,
+        "description": "Collect Aadhaar, document issue year, and country of issue.",
+        "required_fields": [
+          "customer_full_name",
+          "aadhaar_token",
+          "document_issue_year",
+          "country_of_issue",
+          "customer_phone"
+        ],
+        "on_entry_event_name": "banking.kyc_case.stage.DOCUMENT_COLLECTION.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "compliance_lead"
+        }
+      },
+      {
+        "id": "RISK_ASSESSMENT",
+        "name": "Risk Assessment",
+        "category": "IN_PROGRESS",
+        "sequence": 3,
+        "sla_hours": 4,
+        "description": "DMN 5-rule PRIORITY table evaluates risk_tier from PEP status, document age, and country risk.",
+        "required_fields": [],
+        "on_entry_event_name": "banking.kyc_case.stage.RISK_ASSESSMENT.entered",
+        "raci": {
+          "responsible": "SYSTEM",
+          "accountable": "compliance_lead"
+        }
+      },
+      {
+        "id": "OFFICER_REVIEW",
+        "name": "Compliance Officer Review",
+        "category": "IN_PROGRESS",
+        "sequence": 4,
+        "sla_hours": 72,
+        "description": "HIGH-risk cases: human compliance officer reviews documents and makes CLEARED or SUSPENDED decision.",
+        "required_fields": [],
+        "on_entry_event_name": "banking.kyc_case.stage.OFFICER_REVIEW.entered",
+        "raci": {
+          "responsible": "COMPLIANCE_OFFICER",
+          "accountable": "compliance_lead"
+        }
+      },
+      {
+        "id": "AUTO_CLEARED",
+        "name": "KYC Auto-Cleared",
+        "category": "CLOSED_WON",
+        "sequence": 5,
+        "description": "LOW or MEDIUM risk \u2014 KYC automatically cleared. Valid for 5 years.",
+        "on_entry_event_name": "banking.kyc_case.stage.AUTO_CLEARED.entered"
+      },
+      {
+        "id": "CLEARED",
+        "name": "KYC Cleared by Officer",
+        "category": "CLOSED_WON",
+        "sequence": 6,
+        "description": "HIGH risk \u2014 compliance officer manually cleared after document review.",
+        "on_entry_event_name": "banking.kyc_case.stage.CLEARED.entered"
+      },
+      {
+        "id": "SUSPENDED",
+        "name": "Account Suspended",
+        "category": "CLOSED_LOST",
+        "sequence": 7,
+        "description": "HIGH risk \u2014 compliance officer suspended account. Customer must visit branch.",
+        "on_entry_event_name": "banking.kyc_case.stage.SUSPENDED.entered"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "T_INITIATED_TO_DOCS",
+        "from": "KYC_INITIATED",
+        "to": "DOCUMENT_COLLECTION",
+        "label": "PEP declaration complete",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "account_number IS NOT NULL AND is_pep IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_DOCS_TO_RISK",
+        "from": "DOCUMENT_COLLECTION",
+        "to": "RISK_ASSESSMENT",
+        "label": "Documents submitted",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "aadhaar_token IS NOT NULL AND document_issue_year IS NOT NULL AND country_of_issue IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_RISK_TO_OFFICER",
+        "from": "RISK_ASSESSMENT",
+        "to": "OFFICER_REVIEW",
+        "label": "High risk \u2014 needs officer review",
+        "trigger": "automatic",
+        "condition": {
+          "type": "decision_result",
+          "decision_ref": "kyc_risk_assessment",
+          "output_field": "risk_tier",
+          "output_equals": "HIGH"
+        }
+      },
+      {
+        "id": "T_RISK_TO_AUTO_CLEARED",
+        "from": "RISK_ASSESSMENT",
+        "to": "AUTO_CLEARED",
+        "label": "LOW/MEDIUM risk \u2014 auto-cleared",
+        "trigger": "automatic",
+        "condition": {
+          "type": "expression",
+          "expression": "risk_tier IN ('LOW', 'MEDIUM')"
+        }
+      },
+      {
+        "id": "T_OFFICER_TO_CLEARED",
+        "from": "OFFICER_REVIEW",
+        "to": "CLEARED",
+        "label": "Officer cleared KYC",
+        "trigger": "manual",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "id": "T_OFFICER_TO_SUSPENDED",
+        "from": "OFFICER_REVIEW",
+        "to": "SUSPENDED",
+        "label": "Officer suspended account",
+        "trigger": "manual",
+        "condition": {
+          "type": "always"
+        }
+      }
+    ]
+  },
+  "automations": {
+    "on_stage_entry": {
+      "KYC_INITIATED": {
+        "actions": [
+          {
+            "name": "Send KYC form WhatsApp \u2014 proactive outreach",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.customer_full_name}}, your SBI KYC verification needs to be updated as per RBI guidelines. To avoid any disruption to your account, please complete the re-verification now.\n\nPlease share the following details \u2014 you can send them all in one message:\n\n1. Account number (your SBI account number)\n2. Full name (as per bank records)\n3. Are you a Politically Exposed Person (PEP)? (yes/no)\n4. Aadhaar number (12 digits) \u2014 will be securely masked\n5. Year when your Aadhaar was issued or last updated (e.g., 2022)\n6. Country where your Aadhaar was issued (e.g., India)\n7. Mobile number (10 digits)\n\nReply with all details at once and we will process your KYC immediately.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.customer_full_name}}"
+              }
+            }
+          }
+        ]
+      },
+      "RISK_ASSESSMENT": {
+        "actions": [
+          {
+            "name": "Invoke KYC risk evaluator",
+            "action_type": "agent_invoke",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "playbook_id": "kyc-risk-evaluator",
+              "hitl_required": false,
+              "blueprint_id": "cccccccc-0005-0005-0005-000000000010"
+            }
+          }
+        ]
+      },
+      "OFFICER_REVIEW": {
+        "actions": [
+          {
+            "name": "Enqueue HITL \u2014 compliance officer review",
+            "action_type": "hitl_enqueue",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "task_type": "kyc_high_risk_review",
+              "context_payload": {
+                "customer_name": "{{new.customer_full_name}}",
+                "account_number": "{{new.account_number}}",
+                "is_pep": "{{new.is_pep}}",
+                "doc_age_years": "{{new.doc_age_years}}",
+                "country_risk_level": "{{new.country_risk_level}}",
+                "risk_tier": "{{new.risk_tier}}"
+              }
+            }
+          },
+          {
+            "name": "Send officer review notification WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.customer_full_name}}, thank you for submitting your KYC details. Your case requires additional verification by our compliance team. You will be contacted within 72 hours. Account: {{new.account_number}}.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.customer_full_name}}"
+              }
+            }
+          }
+        ]
+      },
+      "AUTO_CLEARED": {
+        "actions": [
+          {
+            "name": "Send KYC auto-cleared WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.customer_full_name}}, your KYC for account {{new.account_number}} has been successfully verified. Your KYC is now valid until {{new.kyc_valid_until}}. No further action is required.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.customer_full_name}}"
+              }
+            }
+          },
+          {
+            "name": "Send KYC auto-cleared email",
+            "action_type": "send_email",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_email"
+                    }
+                  ]
+                }
+              },
+              "subject": "KYC Verified \u2014 {{new.customer_full_name}}",
+              "body": "Dear {{new.customer_full_name}},\n\nYour KYC re-verification for account {{new.account_number}} has been completed successfully.\n\nKYC Valid Until: {{new.kyc_valid_until}}\nRisk Assessment: Standard verification completed\n\nNo further action is required.\n\nThank you,\nSBI Compliance Team via Zo"
+            }
+          }
+        ]
+      },
+      "CLEARED": {
+        "actions": [
+          {
+            "name": "Send officer-cleared WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.customer_full_name}}, your KYC for account {{new.account_number}} has been reviewed and approved by our compliance team. Your account is fully active. KYC valid until {{new.kyc_valid_until}}.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.customer_full_name}}"
+              }
+            }
+          }
+        ]
+      },
+      "SUSPENDED": {
+        "actions": [
+          {
+            "name": "Send suspension notice WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.customer_full_name}}, following our compliance review, your account {{new.account_number}} requires an in-person verification. Please visit your nearest SBI branch within 7 days with original identity documents. Reason: {{new.suspension_reason}}. For assistance, call SBI helpline: 1800-11-2211.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.customer_full_name}}"
+              }
+            }
+          },
+          {
+            "name": "Send suspension email",
+            "action_type": "send_email",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_email"
+                    }
+                  ]
+                }
+              },
+              "subject": "Action Required: KYC Re-verification \u2014 {{new.customer_full_name}}",
+              "body": "Dear {{new.customer_full_name}},\n\nFollowing our compliance review of your KYC submission for account {{new.account_number}}, your account requires an in-person verification.\n\nPlease visit your nearest SBI branch within 7 working days with the following original documents:\n- Aadhaar Card\n- PAN Card\n- Recent passport-size photograph\n\nReason: {{new.suspension_reason}}\n\nFor assistance: SBI Helpline 1800-11-2211\n\nThank you,\nSBI Compliance Team"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sla_rules": [
+    {
+      "id": "SLA_KYC_DOCS_48H",
+      "name": "KYC Document Collection (48h)",
+      "monitored_stages": [
+        "KYC_INITIATED",
+        "DOCUMENT_COLLECTION"
+      ],
+      "check_frequency": "0 */12 * * *",
+      "time_threshold_hours": 48,
+      "action": {
+        "type": "send_whatsapp",
+        "config": {
+          "template_name": "hello_world",
+          "recipients": {
+            "to": {
+              "sources": [
+                {
+                  "type": "field",
+                  "field": "customer_phone"
+                }
+              ]
+            }
+          },
+          "template_variables": {
+            "1": "{{new.customer_full_name}}"
+          }
+        }
+      }
+    },
+    {
+      "id": "SLA_OFFICER_REVIEW_72H",
+      "name": "Compliance Officer Review (72h)",
+      "monitored_stages": [
+        "OFFICER_REVIEW"
+      ],
+      "check_frequency": "0 */8 * * *",
+      "time_threshold_hours": 72,
+      "action": {
+        "type": "alert_admin",
+        "config": {
+          "message": "KYC officer review stuck > 72h for {{new.customer_full_name}} ({{new.account_number}})"
+        }
+      }
+    }
+  ]
+}

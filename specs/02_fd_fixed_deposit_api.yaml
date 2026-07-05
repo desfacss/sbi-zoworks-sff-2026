@@ -1,0 +1,94 @@
+openapi: 3.0.0
+info:
+  title: fixed_deposit API
+  version: 1.0.0
+paths:
+  /fixed_deposit:
+    post:
+      summary: Create fixed_deposit
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deposit_amount:
+                  type: number
+                  x-required: true
+                  x-pii: false
+                  x-validation: '>= 10000'
+                  title: Deposit Amount (INR)
+                tenure_days:
+                  type: integer
+                  x-required: true
+                  x-pii: false
+                  x-validation: '>= 7'
+                  title: Tenure (Days)
+                is_senior_citizen:
+                  type: boolean
+                  x-required: true
+                  x-pii: false
+                  title: Senior Citizen?
+                depositor_full_name:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Depositor Full Name
+                depositor_pan_token:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PAN
+                  title: PAN Token
+                depositor_phone:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PHONE
+                  title: Mobile Number
+                depositor_email:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: EMAIL
+                  title: Email Address
+                nominee_name:
+                  type: string
+                  x-required: false
+                  x-pii: false
+                  title: Nominee Full Name
+                interest_rate:
+                  type: number
+                  x-computed: true
+                  title: Applied Interest Rate (%)
+                maturity_value:
+                  type: number
+                  x-computed: true
+                  title: Maturity Value (INR)
+                fd_account_number:
+                  type: string
+                  x-computed: true
+                  title: FD Account Number
+                interest_tier:
+                  type: string
+                  x-computed: true
+                  enum:
+                  - REGULAR_SHORT
+                  - REGULAR_LONG
+                  - PREMIUM_SHORT
+                  - PREMIUM_LONG
+                  - BULK_SHORT
+                  - BULK_LONG
+                  - BELOW_MINIMUM
+                  title: Interest Tier
+                maturity_date:
+                  type: string
+                  x-computed: true
+                  title: Maturity Date
+                tds_applicable:
+                  type: boolean
+                  x-computed: true
+                  title: TDS Applicable?
+      responses:
+        '200':
+          description: Success

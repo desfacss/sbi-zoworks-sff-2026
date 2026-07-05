@@ -1,0 +1,299 @@
+{
+  "lifecycle": {
+    "start_stage": "APPLICATION_SUBMITTED",
+    "stages": [
+      {
+        "id": "APPLICATION_SUBMITTED",
+        "name": "Application Received",
+        "category": "NEW",
+        "sequence": 1,
+        "sla_hours": 24,
+        "description": "Initial contact. Collect loan amount.",
+        "required_fields": [
+          "loan_amount"
+        ],
+        "on_entry_event_name": "external.loan_application.stage.APPLICATION_SUBMITTED.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "finance_lead"
+        }
+      },
+      {
+        "id": "CREDIT_CHECK",
+        "name": "PII Collection & Credit Check",
+        "category": "IN_PROGRESS",
+        "sequence": 2,
+        "sla_hours": 24,
+        "description": "Collect and tokenise PAN, phone, email. Run CIBIL bureau check.",
+        "required_fields": [
+          "applicant_full_name",
+          "business_name",
+          "annual_turnover_inr",
+          "monthly_salary",
+          "applicant_pan_token",
+          "applicant_phone",
+          "applicant_email"
+        ],
+        "on_entry_event_name": "external.loan_application.stage.CREDIT_CHECK.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "finance_lead"
+        }
+      },
+      {
+        "id": "ELIGIBILITY_EVALUATION",
+        "name": "Eligibility Evaluation",
+        "category": "IN_PROGRESS",
+        "sequence": 3,
+        "sla_hours": 2,
+        "description": "DMN decision table: annual_turnover_inr + cibil_score \u2192 mudra_tier + is_eligible.",
+        "required_fields": [],
+        "on_entry_event_name": "external.loan_application.stage.ELIGIBILITY_EVALUATION.entered",
+        "raci": {
+          "responsible": "SYSTEM",
+          "accountable": "finance_lead"
+        }
+      },
+      {
+        "id": "APPROVED",
+        "name": "Loan Approved",
+        "category": "CLOSED_WON",
+        "sequence": 4,
+        "description": "SBI Core returned success. WhatsApp + email sent to applicant.",
+        "on_entry_event_name": "external.loan_application.stage.APPROVED.entered"
+      },
+      {
+        "id": "REJECTED",
+        "name": "Application Rejected",
+        "category": "CLOSED_LOST",
+        "sequence": 5,
+        "description": "Failed eligibility or SBI Core rejection. WhatsApp + email sent with rejection_reason.",
+        "on_entry_event_name": "external.loan_application.stage.REJECTED.entered"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "T_SUBMIT_TO_CREDIT",
+        "from": "APPLICATION_SUBMITTED",
+        "to": "CREDIT_CHECK",
+        "label": "Loan amount collected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "loan_amount IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_CREDIT_TO_EVAL",
+        "from": "CREDIT_CHECK",
+        "to": "ELIGIBILITY_EVALUATION",
+        "label": "All PII collected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "applicant_pan_token IS NOT NULL AND monthly_salary IS NOT NULL AND annual_turnover_inr IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_EVAL_TO_APPROVED",
+        "from": "ELIGIBILITY_EVALUATION",
+        "to": "APPROVED",
+        "label": "Eligible for MUDRA loan",
+        "trigger": "automatic",
+        "condition": {
+          "type": "decision_result",
+          "decision_ref": "mudra_eligibility",
+          "output_equals": "true"
+        }
+      },
+      {
+        "id": "T_EVAL_TO_REJECTED",
+        "from": "ELIGIBILITY_EVALUATION",
+        "to": "REJECTED",
+        "label": "Not eligible",
+        "trigger": "automatic",
+        "condition": {
+          "type": "decision_result",
+          "decision_ref": "mudra_eligibility",
+          "output_equals": "false"
+        }
+      }
+    ]
+  },
+  "automations": {
+    "on_stage_entry": {
+      "ELIGIBILITY_EVALUATION": {
+        "actions": [
+          {
+            "name": "Invoke eligibility evaluator agent",
+            "action_type": "agent_invoke",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "playbook_id": "mudra-eligibility-evaluator",
+              "hitl_required": false,
+              "blueprint_id": "cccccccc-0003-0003-0003-000000000010"
+            }
+          }
+        ]
+      },
+      "APPROVED": {
+        "actions": [
+          {
+            "name": "Send approval WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Congratulations {{new.applicant_full_name}}! Your MUDRA loan of Rs {{new.loan_amount}} has been approved under the {{new.mudra_tier}} tier. Loan Account: {{new.loan_account_number}}. Funds disbursed within 2 working days.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "applicant_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.applicant_full_name}}"
+              }
+            }
+          },
+          {
+            "name": "Send approval email",
+            "action_type": "send_email",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "applicant_email"
+                    }
+                  ]
+                }
+              },
+              "subject": "Your MUDRA Loan is Approved \u2014 {{new.applicant_full_name}}",
+              "body": "Dear {{new.applicant_full_name}},\n\nYour MUDRA loan of Rs {{new.loan_amount}} is approved under the {{new.mudra_tier}} tier.\n\nLoan Account: {{new.loan_account_number}}\nRecommended Cap: Rs {{new.recommended_loan_cap}}\n\nFunds will be disbursed within 2 working days.\n\nThank you,\nSBI e-MUDRA via Zo"
+            }
+          },
+          {
+            "name": "Enqueue HITL review",
+            "action_type": "hitl_enqueue",
+            "priority": 3,
+            "run_asynchronous": true,
+            "config": {
+              "task_type": "loan_origination_review",
+              "context_payload": {
+                "applicant_name": "{{new.applicant_full_name}}",
+                "loan_amount": "{{new.loan_amount}}",
+                "mudra_tier": "{{new.mudra_tier}}",
+                "business_name": "{{new.business_name}}",
+                "annual_turnover": "{{new.annual_turnover_inr}}",
+                "recommended_cap": "{{new.recommended_loan_cap}}"
+              }
+            }
+          }
+        ]
+      },
+      "REJECTED": {
+        "actions": [
+          {
+            "name": "Send rejection WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.applicant_full_name}}, we regret that your MUDRA loan application could not be approved. Reason: {{new.rejection_reason}}. You may reapply after 90 days.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "applicant_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.applicant_full_name}}"
+              }
+            }
+          },
+          {
+            "name": "Send rejection email",
+            "action_type": "send_email",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "applicant_email"
+                    }
+                  ]
+                }
+              },
+              "subject": "Update on Your MUDRA Loan Application",
+              "body": "Dear {{new.applicant_full_name}},\n\nWe regret that your MUDRA loan application could not be approved.\n\nReason: {{new.rejection_reason}}\n\nYou may reapply after 90 days.\n\nThank you,\nSBI e-MUDRA via Zo"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sla_rules": [
+    {
+      "id": "SLA_APPLICATION_24H",
+      "name": "Application Slot Collection (24h)",
+      "monitored_stages": [
+        "APPLICATION_SUBMITTED",
+        "CREDIT_CHECK"
+      ],
+      "check_frequency": "0 */6 * * *",
+      "time_threshold_hours": 24,
+      "action": {
+        "type": "send_whatsapp",
+        "config": {
+          "template_name": "hello_world",
+          "recipients": {
+            "to": {
+              "sources": [
+                {
+                  "type": "field",
+                  "field": "applicant_phone"
+                }
+              ]
+            }
+          },
+          "template_variables": {
+            "1": "{{new.applicant_full_name}}"
+          }
+        }
+      }
+    },
+    {
+      "id": "SLA_ELIGIBILITY_2H",
+      "name": "Eligibility Evaluation (2h)",
+      "monitored_stages": [
+        "ELIGIBILITY_EVALUATION"
+      ],
+      "check_frequency": "*/30 * * * *",
+      "time_threshold_hours": 2,
+      "action": {
+        "type": "alert_admin",
+        "config": {
+          "message": "Eligibility evaluation stuck > 2h for {{new.applicant_full_name}}"
+        }
+      }
+    }
+  ]
+}

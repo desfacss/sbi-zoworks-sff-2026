@@ -1,0 +1,92 @@
+openapi: 3.0.0
+info:
+  title: kyc_case API
+  version: 1.0.0
+paths:
+  /kyc_case:
+    post:
+      summary: Create kyc_case
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_number:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Account Number
+                customer_full_name:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Customer Full Name
+                is_pep:
+                  type: boolean
+                  x-required: true
+                  x-pii: false
+                  title: Politically Exposed Person?
+                aadhaar_token:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: AADHAAR
+                  title: Aadhaar Token
+                document_issue_year:
+                  type: integer
+                  x-required: true
+                  x-pii: false
+                  title: Document Issued Year
+                country_of_issue:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Document Country of Issue
+                customer_phone:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PHONE
+                  title: Mobile Number
+                customer_email:
+                  type: string
+                  x-required: false
+                  x-pii: true
+                  x-pii_class: EMAIL
+                  title: Email Address
+                risk_tier:
+                  type: string
+                  x-computed: true
+                  enum:
+                  - LOW
+                  - MEDIUM
+                  - HIGH
+                  title: Risk Tier
+                kyc_valid_until:
+                  type: string
+                  x-computed: true
+                  title: KYC Valid Until Date
+                review_officer_id:
+                  type: string
+                  x-computed: true
+                  title: Assigned Compliance Officer
+                suspension_reason:
+                  type: string
+                  x-computed: true
+                  title: Suspension Reason
+                doc_age_years:
+                  type: number
+                  x-computed: true
+                  title: Document Age (Years)
+                country_risk_level:
+                  type: string
+                  x-computed: true
+                  enum:
+                  - LOW
+                  - MEDIUM
+                  - HIGH
+                  title: Country Risk Level
+      responses:
+        '200':
+          description: Success

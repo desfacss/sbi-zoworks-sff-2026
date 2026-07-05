@@ -1,0 +1,90 @@
+openapi: 3.0.0
+info:
+  title: loan_application API
+  version: 1.0.0
+paths:
+  /loan_application:
+    post:
+      summary: Create loan_application
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                loan_amount:
+                  type: number
+                  x-required: true
+                  x-pii: false
+                  x-validation: '>= 50000 AND <= 10000000'
+                  title: Loan Amount (INR)
+                applicant_full_name:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Applicant Full Name
+                business_name:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Business Name
+                annual_turnover_inr:
+                  type: number
+                  x-required: true
+                  x-pii: false
+                  title: Annual Turnover (INR)
+                monthly_salary:
+                  type: number
+                  x-required: true
+                  x-pii: false
+                  title: Monthly Income (INR)
+                applicant_pan_token:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PAN
+                  x-pii_raw_field: applicant_pan
+                  title: PAN Token
+                applicant_phone:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PHONE
+                  title: Mobile Number
+                applicant_email:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: EMAIL
+                  x-format: email
+                  title: Email Address
+                gstin:
+                  type: string
+                  x-required: false
+                  x-pii: false
+                  title: GST Number
+                mudra_tier:
+                  type: string
+                  enum:
+                  - SHISHU
+                  - KISHORE
+                  - TARUN
+                  x-computed: true
+                is_eligible:
+                  type: boolean
+                  x-computed: true
+                cibil_score:
+                  type: number
+                  x-computed: true
+                loan_account_number:
+                  type: string
+                  x-computed: true
+                rejection_reason:
+                  type: string
+                  x-computed: true
+                recommended_loan_cap:
+                  type: number
+                  x-computed: true
+      responses:
+        '200':
+          description: Success

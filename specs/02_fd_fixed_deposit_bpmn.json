@@ -1,0 +1,295 @@
+{
+  "lifecycle": {
+    "start_stage": "FD_ENQUIRY",
+    "stages": [
+      {
+        "id": "FD_ENQUIRY",
+        "name": "FD Enquiry Received",
+        "category": "NEW",
+        "sequence": 1,
+        "sla_hours": 12,
+        "description": "Customer initiates FD. Collect deposit amount and tenure.",
+        "required_fields": [
+          "deposit_amount",
+          "tenure_days"
+        ],
+        "on_entry_event_name": "banking.fixed_deposit.stage.FD_ENQUIRY.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "CUSTOMER_DETAILS",
+        "name": "Customer Details Collection",
+        "category": "IN_PROGRESS",
+        "sequence": 2,
+        "sla_hours": 12,
+        "description": "Collect senior citizen flag, PAN for TDS, contact info.",
+        "required_fields": [
+          "is_senior_citizen",
+          "depositor_full_name",
+          "depositor_pan_token",
+          "depositor_phone",
+          "depositor_email"
+        ],
+        "on_entry_event_name": "banking.fixed_deposit.stage.CUSTOMER_DETAILS.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "INTEREST_CALCULATION",
+        "name": "Interest Rate Evaluation",
+        "category": "IN_PROGRESS",
+        "sequence": 3,
+        "sla_hours": 1,
+        "description": "DMN 9-rule table evaluates interest_rate, maturity_value, interest_tier based on amount + tenure + senior citizen flag.",
+        "required_fields": [],
+        "on_entry_event_name": "banking.fixed_deposit.stage.INTEREST_CALCULATION.entered",
+        "raci": {
+          "responsible": "SYSTEM",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "MATURITY_PREVIEW",
+        "name": "Maturity Preview Shown",
+        "category": "IN_PROGRESS",
+        "sequence": 4,
+        "sla_hours": 24,
+        "description": "Computed interest rate and maturity value sent to customer. Awaiting confirmation.",
+        "required_fields": [],
+        "on_entry_event_name": "banking.fixed_deposit.stage.MATURITY_PREVIEW.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "CONFIRMED",
+        "name": "FD Confirmed",
+        "category": "CLOSED_WON",
+        "sequence": 5,
+        "description": "Customer confirmed. FD account number generated. Certificate emailed.",
+        "on_entry_event_name": "banking.fixed_deposit.stage.CONFIRMED.entered"
+      },
+      {
+        "id": "CANCELLED",
+        "name": "FD Cancelled",
+        "category": "CANCELLED",
+        "sequence": 6,
+        "description": "Customer cancelled before confirmation.",
+        "on_entry_event_name": "banking.fixed_deposit.stage.CANCELLED.entered"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "T_FD_ENQUIRY_TO_DETAILS",
+        "from": "FD_ENQUIRY",
+        "to": "CUSTOMER_DETAILS",
+        "label": "Amount and tenure collected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "deposit_amount IS NOT NULL AND tenure_days IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_DETAILS_TO_CALC",
+        "from": "CUSTOMER_DETAILS",
+        "to": "INTEREST_CALCULATION",
+        "label": "All customer details collected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "depositor_pan_token IS NOT NULL AND depositor_phone IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_CALC_TO_PREVIEW",
+        "from": "INTEREST_CALCULATION",
+        "to": "MATURITY_PREVIEW",
+        "label": "Interest calculated",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "interest_rate IS NOT NULL AND maturity_value IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_PREVIEW_TO_CONFIRMED",
+        "from": "MATURITY_PREVIEW",
+        "to": "CONFIRMED",
+        "label": "Customer confirmed",
+        "trigger": "manual",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "id": "T_PREVIEW_TO_CANCELLED",
+        "from": "MATURITY_PREVIEW",
+        "to": "CANCELLED",
+        "label": "Customer cancelled",
+        "trigger": "manual",
+        "condition": {
+          "type": "always"
+        }
+      }
+    ]
+  },
+  "automations": {
+    "on_stage_entry": {
+      "INTEREST_CALCULATION": {
+        "actions": [
+          {
+            "name": "Invoke FD interest evaluator",
+            "action_type": "agent_invoke",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "playbook_id": "fd-interest-evaluator",
+              "hitl_required": false,
+              "blueprint_id": "cccccccc-0004-0004-0004-000000000010"
+            }
+          }
+        ]
+      },
+      "MATURITY_PREVIEW": {
+        "actions": [
+          {
+            "name": "Send maturity preview WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Dear {{new.depositor_full_name}}, your FD of Rs {{new.deposit_amount}} for {{new.tenure_days}} days will earn {{new.interest_rate}}% p.a. Maturity Value: Rs {{new.maturity_value}}. Reply CONFIRM to book or CANCEL to exit.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "depositor_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.depositor_full_name}}"
+              }
+            }
+          }
+        ]
+      },
+      "CONFIRMED": {
+        "actions": [
+          {
+            "name": "Send FD confirmation email",
+            "action_type": "send_email",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "depositor_email"
+                    }
+                  ]
+                }
+              },
+              "subject": "Your FD is Confirmed \u2014 {{new.depositor_full_name}}",
+              "body": "Dear {{new.depositor_full_name}},\n\nYour Fixed Deposit of Rs {{new.deposit_amount}} at {{new.interest_rate}}% p.a. has been confirmed.\n\nFD Account: {{new.fd_account_number}}\nMaturity Date: {{new.maturity_date}}\nMaturity Value: Rs {{new.maturity_value}}\nTDS Applicable: {{new.tds_applicable}}\n\nThank you for banking with SBI via Zo."
+            }
+          },
+          {
+            "name": "Send FD confirmation WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Your FD is confirmed! Account: {{new.fd_account_number}}. Matures on {{new.maturity_date}} with Rs {{new.maturity_value}}. Certificate emailed to {{new.depositor_email}}.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "depositor_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.depositor_full_name}}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sla_rules": [
+    {
+      "id": "SLA_FD_DETAILS_12H",
+      "name": "FD Customer Details (12h)",
+      "monitored_stages": [
+        "FD_ENQUIRY",
+        "CUSTOMER_DETAILS"
+      ],
+      "check_frequency": "0 */4 * * *",
+      "time_threshold_hours": 12,
+      "action": {
+        "type": "send_whatsapp",
+        "config": {
+          "template_name": "hello_world",
+          "recipients": {
+            "to": {
+              "sources": [
+                {
+                  "type": "field",
+                  "field": "depositor_phone"
+                }
+              ]
+            }
+          },
+          "template_variables": {
+            "1": "{{new.depositor_full_name}}"
+          }
+        }
+      }
+    },
+    {
+      "id": "SLA_FD_CONFIRMATION_24H",
+      "name": "FD Awaiting Confirmation (24h)",
+      "monitored_stages": [
+        "MATURITY_PREVIEW"
+      ],
+      "check_frequency": "0 */6 * * *",
+      "time_threshold_hours": 24,
+      "action": {
+        "type": "send_whatsapp",
+        "config": {
+          "template_name": "hello_world",
+          "recipients": {
+            "to": {
+              "sources": [
+                {
+                  "type": "field",
+                  "field": "depositor_phone"
+                }
+              ]
+            }
+          },
+          "template_variables": {
+            "1": "{{new.depositor_full_name}}"
+          }
+        }
+      }
+    }
+  ]
+}

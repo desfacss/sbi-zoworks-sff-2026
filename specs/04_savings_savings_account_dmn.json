@@ -1,0 +1,91 @@
+[
+  {
+    "id": "savings_product_selection",
+    "description": "Savings account product selection: 6-rule PRIORITY DMN based on employment type and annual income.",
+    "hit_policy": "PRIORITY",
+    "inputs": [
+      {
+        "key": "employment_type",
+        "type": "string",
+        "source": "employment_type"
+      },
+      {
+        "key": "annual_income_inr",
+        "type": "number",
+        "source": "annual_income_inr"
+      }
+    ],
+    "output": {
+      "key": "product_tier",
+      "type": "string"
+    },
+    "rules": [
+      {
+        "priority": 1,
+        "label": "Premium Salary \u2014 high income salaried",
+        "input_entries": {
+          "employment_type": "salaried",
+          "annual_income_inr": ">= 500000"
+        },
+        "output_entries": {
+          "product_tier": "PREMIUM_SALARY",
+          "minimum_balance_inr": 0
+        }
+      },
+      {
+        "priority": 2,
+        "label": "Salary \u2014 regular salaried",
+        "input_entries": {
+          "employment_type": "salaried"
+        },
+        "output_entries": {
+          "product_tier": "SALARY",
+          "minimum_balance_inr": 0
+        }
+      },
+      {
+        "priority": 3,
+        "label": "Premium Savings \u2014 high income self-empl",
+        "input_entries": {
+          "employment_type": "self_employed",
+          "annual_income_inr": ">= 1000000"
+        },
+        "output_entries": {
+          "product_tier": "PREMIUM_SAVINGS",
+          "minimum_balance_inr": 25000
+        }
+      },
+      {
+        "priority": 4,
+        "label": "Jan Dhan \u2014 below poverty line",
+        "input_entries": {
+          "annual_income_inr": "< 50000"
+        },
+        "output_entries": {
+          "product_tier": "JAN_DHAN",
+          "minimum_balance_inr": 0
+        }
+      },
+      {
+        "priority": 5,
+        "label": "Student Savings",
+        "input_entries": {
+          "employment_type": "student"
+        },
+        "output_entries": {
+          "product_tier": "STUDENT_SAVINGS",
+          "minimum_balance_inr": 500
+        }
+      },
+      {
+        "priority": 6,
+        "label": "Regular Savings \u2014 default",
+        "input_entries": {},
+        "output_entries": {
+          "product_tier": "REGULAR_SAVINGS",
+          "minimum_balance_inr": 10000
+        }
+      }
+    ]
+  }
+]

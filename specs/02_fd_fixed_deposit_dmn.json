@@ -1,0 +1,154 @@
+[
+  {
+    "id": "fd_interest_rate",
+    "description": "FD interest rate: 9-rule PRIORITY table based on amount, tenure, and senior citizen status.",
+    "hit_policy": "PRIORITY",
+    "inputs": [
+      {
+        "key": "deposit_amount",
+        "type": "number",
+        "source": "deposit_amount"
+      },
+      {
+        "key": "tenure_days",
+        "type": "number",
+        "source": "tenure_days"
+      },
+      {
+        "key": "is_senior_citizen",
+        "type": "boolean",
+        "source": "is_senior_citizen"
+      }
+    ],
+    "output": {
+      "key": "interest_rate",
+      "type": "number"
+    },
+    "rules": [
+      {
+        "priority": 1,
+        "label": "Below minimum tenure \u2014 no FD",
+        "input_entries": {
+          "tenure_days": "< 7"
+        },
+        "output_entries": {
+          "interest_rate": 3.5,
+          "interest_tier": "BELOW_MINIMUM",
+          "tds_applicable": false
+        }
+      },
+      {
+        "priority": 2,
+        "label": "Bulk + long term + senior",
+        "input_entries": {
+          "deposit_amount": ">= 10000000",
+          "tenure_days": ">= 365",
+          "is_senior_citizen": true
+        },
+        "output_entries": {
+          "interest_rate": 7.5,
+          "interest_tier": "BULK_LONG",
+          "tds_applicable": true
+        }
+      },
+      {
+        "priority": 3,
+        "label": "Bulk + long term regular",
+        "input_entries": {
+          "deposit_amount": ">= 10000000",
+          "tenure_days": ">= 365",
+          "is_senior_citizen": false
+        },
+        "output_entries": {
+          "interest_rate": 7.0,
+          "interest_tier": "BULK_LONG",
+          "tds_applicable": true
+        }
+      },
+      {
+        "priority": 4,
+        "label": "Bulk + short term + senior",
+        "input_entries": {
+          "deposit_amount": ">= 10000000",
+          "tenure_days": ">= 7",
+          "is_senior_citizen": true
+        },
+        "output_entries": {
+          "interest_rate": 6.75,
+          "interest_tier": "BULK_SHORT",
+          "tds_applicable": true
+        }
+      },
+      {
+        "priority": 5,
+        "label": "Bulk + short term regular",
+        "input_entries": {
+          "deposit_amount": ">= 10000000",
+          "tenure_days": ">= 7",
+          "is_senior_citizen": false
+        },
+        "output_entries": {
+          "interest_rate": 6.5,
+          "interest_tier": "BULK_SHORT",
+          "tds_applicable": true
+        }
+      },
+      {
+        "priority": 6,
+        "label": "Regular + long term + senior",
+        "input_entries": {
+          "deposit_amount": ">= 10000",
+          "tenure_days": ">= 365",
+          "is_senior_citizen": true
+        },
+        "output_entries": {
+          "interest_rate": 7.25,
+          "interest_tier": "PREMIUM_LONG",
+          "tds_applicable": true
+        }
+      },
+      {
+        "priority": 7,
+        "label": "Regular + long term standard",
+        "input_entries": {
+          "deposit_amount": ">= 10000",
+          "tenure_days": ">= 365",
+          "is_senior_citizen": false
+        },
+        "output_entries": {
+          "interest_rate": 6.75,
+          "interest_tier": "REGULAR_LONG",
+          "tds_applicable": true
+        }
+      },
+      {
+        "priority": 8,
+        "label": "Regular + short term + senior",
+        "input_entries": {
+          "deposit_amount": ">= 10000",
+          "tenure_days": ">= 7",
+          "is_senior_citizen": true
+        },
+        "output_entries": {
+          "interest_rate": 6.5,
+          "interest_tier": "PREMIUM_SHORT",
+          "tds_applicable": false
+        }
+      },
+      {
+        "priority": 9,
+        "label": "Regular + short term standard",
+        "input_entries": {
+          "deposit_amount": ">= 10000",
+          "tenure_days": ">= 7",
+          "is_senior_citizen": false
+        },
+        "output_entries": {
+          "interest_rate": 6.0,
+          "interest_tier": "REGULAR_SHORT",
+          "tds_applicable": false
+        }
+      }
+    ]
+  }
+]

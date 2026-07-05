@@ -1,0 +1,260 @@
+{
+  "lifecycle": {
+    "start_stage": "ENQUIRY",
+    "stages": [
+      {
+        "id": "ENQUIRY",
+        "name": "Account Enquiry",
+        "category": "NEW",
+        "sequence": 1,
+        "sla_hours": 24,
+        "description": "Customer initiates savings account. Collect basic personal details.",
+        "required_fields": [
+          "customer_full_name",
+          "date_of_birth"
+        ],
+        "on_entry_event_name": "banking.savings_account.stage.ENQUIRY.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "PERSONAL_DETAILS",
+        "name": "Personal & Employment Details",
+        "category": "IN_PROGRESS",
+        "sequence": 2,
+        "sla_hours": 24,
+        "description": "Collect employment type, annual income, and preferred branch PIN.",
+        "required_fields": [
+          "employment_type",
+          "annual_income_inr",
+          "preferred_branch_pin"
+        ],
+        "on_entry_event_name": "banking.savings_account.stage.PERSONAL_DETAILS.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "DOCUMENT_VERIFICATION",
+        "name": "Document Submission",
+        "category": "IN_PROGRESS",
+        "sequence": 3,
+        "sla_hours": 24,
+        "description": "Collect Aadhaar (tokenised), PAN (tokenised), mobile, email.",
+        "required_fields": [
+          "aadhaar_token",
+          "pan_token",
+          "customer_phone",
+          "customer_email"
+        ],
+        "on_entry_event_name": "banking.savings_account.stage.DOCUMENT_VERIFICATION.entered",
+        "raci": {
+          "responsible": "CUSTOMER",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "PRODUCT_SELECTION",
+        "name": "Product Selection",
+        "category": "IN_PROGRESS",
+        "sequence": 4,
+        "sla_hours": 1,
+        "description": "DMN 6-rule table selects product_tier and minimum_balance based on employment + income profile.",
+        "required_fields": [],
+        "on_entry_event_name": "banking.savings_account.stage.PRODUCT_SELECTION.entered",
+        "raci": {
+          "responsible": "SYSTEM",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "BRANCH_ASSIGNMENT",
+        "name": "Branch Assignment",
+        "category": "IN_PROGRESS",
+        "sequence": 5,
+        "sla_hours": 4,
+        "description": "System assigns nearest branch based on preferred_branch_pin.",
+        "required_fields": [],
+        "on_entry_event_name": "banking.savings_account.stage.BRANCH_ASSIGNMENT.entered",
+        "raci": {
+          "responsible": "SYSTEM",
+          "accountable": "banking_lead"
+        }
+      },
+      {
+        "id": "ACCOUNT_CREATED",
+        "name": "Account Created",
+        "category": "CLOSED_WON",
+        "sequence": 6,
+        "description": "Account number generated. Welcome kit emailed. Passbook dispatch initiated.",
+        "on_entry_event_name": "banking.savings_account.stage.ACCOUNT_CREATED.entered"
+      },
+      {
+        "id": "REJECTED",
+        "name": "Application Rejected",
+        "category": "CLOSED_LOST",
+        "sequence": 7,
+        "description": "Application rejected due to document failure or compliance block.",
+        "on_entry_event_name": "banking.savings_account.stage.REJECTED.entered"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "T_ENQUIRY_TO_PERSONAL",
+        "from": "ENQUIRY",
+        "to": "PERSONAL_DETAILS",
+        "label": "Basic details collected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "customer_full_name IS NOT NULL AND date_of_birth IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_PERSONAL_TO_DOCS",
+        "from": "PERSONAL_DETAILS",
+        "to": "DOCUMENT_VERIFICATION",
+        "label": "Employment details collected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "employment_type IS NOT NULL AND annual_income_inr IS NOT NULL AND preferred_branch_pin IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_DOCS_TO_PRODUCT",
+        "from": "DOCUMENT_VERIFICATION",
+        "to": "PRODUCT_SELECTION",
+        "label": "Documents submitted",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "aadhaar_token IS NOT NULL AND pan_token IS NOT NULL AND customer_phone IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_PRODUCT_TO_BRANCH",
+        "from": "PRODUCT_SELECTION",
+        "to": "BRANCH_ASSIGNMENT",
+        "label": "Product selected",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "product_tier IS NOT NULL AND minimum_balance_inr IS NOT NULL"
+        }
+      },
+      {
+        "id": "T_BRANCH_TO_CREATED",
+        "from": "BRANCH_ASSIGNMENT",
+        "to": "ACCOUNT_CREATED",
+        "label": "Branch assigned, account created",
+        "trigger": "automatic",
+        "condition": {
+          "type": "field_check",
+          "expression": "branch_code IS NOT NULL"
+        }
+      }
+    ]
+  },
+  "automations": {
+    "on_stage_entry": {
+      "PRODUCT_SELECTION": {
+        "actions": [
+          {
+            "name": "Invoke savings product selector",
+            "action_type": "agent_invoke",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "playbook_id": "savings-product-selector",
+              "hitl_required": false,
+              "blueprint_id": "cccccccc-0006-0006-0006-000000000010"
+            }
+          }
+        ]
+      },
+      "ACCOUNT_CREATED": {
+        "actions": [
+          {
+            "name": "Send welcome WhatsApp",
+            "action_type": "send_whatsapp",
+            "priority": 1,
+            "run_asynchronous": true,
+            "config": {
+              "template_name": "hello_world",
+              "message_text": "Welcome to SBI, {{new.customer_full_name}}! Your {{new.product_tier}} savings account has been opened. Account: {{new.account_number}}. Branch: {{new.branch_name}}. Minimum balance: Rs {{new.minimum_balance_inr}}. Welcome kit dispatched to your address.",
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_phone"
+                    }
+                  ]
+                }
+              },
+              "template_variables": {
+                "1": "{{new.customer_full_name}}"
+              }
+            }
+          },
+          {
+            "name": "Send welcome email",
+            "action_type": "send_email",
+            "priority": 2,
+            "run_asynchronous": true,
+            "config": {
+              "recipients": {
+                "to": {
+                  "sources": [
+                    {
+                      "type": "field",
+                      "field": "customer_email"
+                    }
+                  ]
+                }
+              },
+              "subject": "Welcome to SBI \u2014 Your Account is Ready",
+              "body": "Dear {{new.customer_full_name}},\n\nCongratulations! Your SBI savings account has been opened.\n\nAccount Number: {{new.account_number}}\nProduct: {{new.product_tier}}\nBranch: {{new.branch_name}} (Code: {{new.branch_code}})\nMinimum Balance: Rs {{new.minimum_balance_inr}}\n\nYour welcome kit will be dispatched within 5 working days.\n\nThank you for choosing SBI via Zo."
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sla_rules": [
+    {
+      "id": "SLA_SAVINGS_DOCS_24H",
+      "name": "Savings Document Collection (24h)",
+      "monitored_stages": [
+        "ENQUIRY",
+        "PERSONAL_DETAILS",
+        "DOCUMENT_VERIFICATION"
+      ],
+      "check_frequency": "0 */6 * * *",
+      "time_threshold_hours": 24,
+      "action": {
+        "type": "send_whatsapp",
+        "config": {
+          "template_name": "hello_world",
+          "recipients": {
+            "to": {
+              "sources": [
+                {
+                  "type": "field",
+                  "field": "customer_phone"
+                }
+              ]
+            }
+          },
+          "template_variables": {
+            "1": "{{new.customer_full_name}}"
+          }
+        }
+      }
+    }
+  ]
+}

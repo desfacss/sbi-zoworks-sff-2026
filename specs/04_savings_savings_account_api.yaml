@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: savings_account API
+  version: 1.0.0
+paths:
+  /savings_account:
+    post:
+      summary: Create savings_account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_full_name:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Full Name
+                date_of_birth:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  x-format: date
+                  title: Date of Birth
+                employment_type:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  enum:
+                  - salaried
+                  - self_employed
+                  - student
+                  - other
+                  title: Employment Type
+                annual_income_inr:
+                  type: number
+                  x-required: true
+                  x-pii: false
+                  title: Annual Income (INR)
+                aadhaar_token:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: AADHAAR
+                  title: Aadhaar Token
+                pan_token:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PAN
+                  title: PAN Token
+                customer_phone:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: PHONE
+                  title: Mobile Number
+                customer_email:
+                  type: string
+                  x-required: true
+                  x-pii: true
+                  x-pii_class: EMAIL
+                  title: Email Address
+                preferred_branch_pin:
+                  type: string
+                  x-required: true
+                  x-pii: false
+                  title: Preferred Branch PIN Code
+                product_tier:
+                  type: string
+                  x-computed: true
+                  enum:
+                  - PREMIUM_SALARY
+                  - SALARY
+                  - PREMIUM_SAVINGS
+                  - JAN_DHAN
+                  - STUDENT_SAVINGS
+                  - REGULAR_SAVINGS
+                  title: Selected Product
+                minimum_balance_inr:
+                  type: number
+                  x-computed: true
+                  title: Minimum Balance Required (INR)
+                account_number:
+                  type: string
+                  x-computed: true
+                  title: Assigned Account Number
+                branch_code:
+                  type: string
+                  x-computed: true
+                  title: Assigned Branch Code
+                branch_name:
+                  type: string
+                  x-computed: true
+                  title: Assigned Branch Name
+      responses:
+        '200':
+          description: Success
