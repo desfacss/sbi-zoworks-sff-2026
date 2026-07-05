@@ -1,9 +1,14 @@
-# SBI MUDRA Loan Origination AI Agent
+# SBI SFF Deterministic AI Framework for Customer Acquisition
 
 > **Zoworks.ai** — Deterministic, Multilingual AI for Instant Loan Origination and Enterprise Vertical Workflows
 > 
 > **Hackathon Submission:** SBI SFF 2026
 > **Theme:** Agentic AI & Emerging Tech | **Problem:** Zero-Friction Customer Acquisition
+
+### 🎥 Watch the Demo
+You can view the full end-to-end sandbox demo video here:
+**[Zoworks SBI SFF Demo (Google Drive)](https://drive.google.com/file/d/1COXxpRKNOyovN3GD3SnD6sipgIVRGvCq/view)**
+
 
 ## 🏆 Executive Summary
 Zoworks.ai is an **Active System of Intelligence** designed to solve the financial sector's greatest operational fear regarding AI: *Hallucination, Drift, and Unpredictable Action*. For this hackathon, we have built a fully functional 5-layer pipeline that compiles raw banking compliance guidelines directly into runtime execution graphs for the MUDRA Loan Origination process. The entire engine can be deployed alongside existing core systems within days - working along with the existing SBI API's. Its also scalable for any process based on SOP or BPMN or DMN or any structured format that the bank already has or with our frontier engineer setting up the required processes, based on consultation with the SBI.
@@ -128,8 +133,8 @@ These schemas (rules within the Structured Decision Registry, workflow state mac
 
 Since this is a public repository, we are sharing the deterministic configurations and API specs used for the SBI demo in the `specs/` directory instead of the full proprietary engine source code.
 
-You can view the full end-to-end sandbox demo video here:
-[Zoworks SBI MUDRA Loan Origination Demo (Google Drive)](https://drive.google.com/file/d/1qZ4zecdpNqCBAIejRRSLCpVcZQZ1QI5u/view)
+You can view the demo video here:
+[Zoworks SBI SFF Demo (Google Drive)](https://drive.google.com/file/d/1COXxpRKNOyovN3GD3SnD6sipgIVRGvCq/view)
 
 > **For the Live Presentation Stage:**
 > When presenting to the panel, the demo showcases our recommended **split-screen layout**:
